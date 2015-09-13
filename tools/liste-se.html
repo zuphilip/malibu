@@ -1,0 +1,233 @@
+<html>
+<head>
+<title>Sacherschliessung einer Liste</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<style type="text/css">
+body { font-family:  Arial, Verdana, sans-serif; }
+</style>
+<script src="jquery-1.10.2.min.js"></script>
+<script src="bibXmlLibrary.js"></script>
+<script type="text/javascript">
+<!--
+
+// Abgewandelt fuer Anreicherung von Fernleihrenner
+
+function ppnListeBestand(ppnListe) {
+    $('#ausgabe4').empty();
+    var ppnArray = ppnListe.split("\n");
+    $(ppnArray).each( function(index, value) {
+        $('#ausgabe4').append("<div id='liste"+index+"'></div>");
+        $('#liste'+index).append(value);
+        var rvkObjekt = {};
+        var swObjekt = {};
+        $.when($.get("http://localhost/isbn-search/SWB2XML.php?isbn="+value),
+                $.get("http://localhost/isbn-search/GBV2XML.php?isbn="+value),
+                $.get("http://localhost/isbn-search/B3KAT2XML.php?isbn="+value),
+                $.get("http://localhost/isbn-search/HEBIS2XML.php?isbn="+value),
+                $.get("http://localhost/isbn-search/HBZ2XML.php?isbn="+value))
+        .then(function(a1,a2,a3,a4,a5) {
+                        $.extend(rvkObjekt, rvk(a1[0], "SWB"));
+                        $.extend(rvkObjekt, rvk(a2[0], "GBV"));
+                        $.extend(rvkObjekt, rvk(a3[0], "B3KAT"));
+                        $.extend(rvkObjekt, rvk(a4[0], "HEBIS"));
+                        $.extend(rvkObjekt, rvk(a5[0], "HBZ"));
+                        
+                        $.extend(swObjekt, sw(a1[0], "SWB"));
+                        $.extend(swObjekt, sw(a2[0], "GBV"));
+                        $.extend(swObjekt, sw(a3[0], "B3KAT"));
+                        $.extend(swObjekt, sw(a4[0], "HEBIS"));
+                        $.extend(swObjekt, sw(a5[0], "HBZ"));
+                       $('#liste'+index).append(";"+rvkObjekt.stringText()+";"+swObjekt.stringText()+";done");
+        });
+    });
+    
+}
+
+
+/*   
+// Funktion fuer Annette
+function ppnListeBestand(ppnListe) {
+    $('#ausgabe4').empty();
+    var ppnArray = ppnListe.split("\n");
+    $(ppnArray).each( function(index, value) {
+        $('#ausgabe4').append("<div id='liste"+index+"'>"+value+"</div>");
+        $.get("http://localhost/isbn-search/MAN2XML.php?any="+value, function(data){
+            $('#liste'+index).append(";"+$(data).find("datensatz").length);
+            //$(data).find("feld[nr='001'][ind=' ']").each(function(){//es gibt ein Problem beim Header z.B. bei MA000169922
+            //    $('#liste'+index).append(";"+$(this).text());
+            //});
+            var bestandArray = {};
+            $(data).find("feld[nr='Z30']").each(function(){
+                var zeileAufgeteilt = $(this).text().split("$$");//$$1A3$$
+                var standortCode = zeileAufgeteilt[3].substr(1);
+                if (standortCode != "BSO") {
+                if (bestandArray[standortCode]) {//nicht BSO
+                    bestandArray[standortCode]++;
+                    //$('#liste'+index).append(";"+bestandArray[standortCode]);
+                } else {
+                    bestandArray[standortCode] = 1;
+                    //$('#liste'+index).append(";"+bestandArray[standortCode]);
+                }}
+                
+            });
+            console.log(bestandArray);
+            
+            var out = '';
+            for (var standort in bestandArray) {
+              out += bestandArray[standort] + 'x' + standort + ',';
+            }
+            
+            $('#liste'+index).append(";"+out);
+            
+            $('#liste'+index).append(";done");
+        });
+    });
+    
+}
+*/
+
+
+/*
+function ppnListeBestand(isbnListe) {
+    $('#ausgabe4').empty();
+    var isbnArray = isbnListe.split("\n");
+    $(isbnArray).each( function(index, value) {
+        $('#ausgabe4').append("<div id='liste"+index+"'>"+value+"</div>");
+        //$('#liste'+index).append("http://localhost/isbn-search/SWB2XML.php?isbn="+value+";");
+        $.get("http://localhost/isbn-search/SWB2XML.php?isbn="+value, function(data){
+            $('#liste'+index).append(";"+$(data).find("record").length);
+            //$(data).find("controlfield[tag='001']").each(function(){
+            //    $('#liste'+index).append(";"+$(this).text());
+            //});
+            $(data).find("datafield[tag='260'] subfield[code='c']").each(function(){//es gibt ein Problem beim Header z.B. bei MA000169922
+                if ($(this).text().substr(0,1)=="c") {
+                    $('#liste'+index).append(";"+$(this).text().substr(1));
+                } else {
+                    $('#liste'+index).append(";"+$(this).text());
+                }
+                return false;
+            });
+            $(data).find("datafield[tag='912'] subfield[code='a']").each(function(){
+                $('#liste'+index).append(";"+$(this).text());
+                
+            });
+            $('#liste'+index).append(";done");
+        });
+    });
+    
+}
+*/
+
+
+function signatur(data) {//MAN spezifisch? Mal hier gespeichert...
+    var ausgabe = '';
+    var tempArray = new Array;
+    $(data).find("feld[nr='Z30']").each(function(){//$$3
+        tempArray = $(this).text().split('$$');//ausgabe += $(this).text();
+        console.log($(this).text().split('$$'));
+        $.each(tempArray, function(index, value){
+           if (value.substr(0,2)=="33") {
+               ausgabe += value.substr(1) + ', ';
+           } 
+        });
+        
+    });
+    return ausgabe;
+}
+
+
+function listeEingabe(ppnListe) {
+    $('#ausgabe3').empty();
+    var ppnArray = ppnListe.split("\n");
+    $(ppnArray).each( function(index, value) {
+        $('#ausgabe3').append("<div id='liste"+index+"'>"+value+"</div>");
+        var Verbund = "SWB";
+        $.get("http://localhost/isbn-search/"+Verbund+"2XML.php?ppn="+value, function(data){
+            var rvkObjekt = rvk(data, Verbund);
+            var titelautor = titel(data,Verbund)+' '+autor100(data,Verbund);
+            var swString = sw(data, Verbund).stringText();
+            $('#liste'+index).append(";"+swString);//SW kommen nur vom SWB
+            
+            console.log(decodeURI(titelautor));
+            $.get("http://localhost/isbn-search/MAN2XML.php?any="+titelautor.replace('.','').replace('/','').replace(':',''), function(dataMAN){
+            $('#liste'+index).append(";"+signatur(dataMAN));
+
+                if (isbn(data, Verbund).length > 0) {
+                    var isbnArray = isbn(data, Verbund);
+                    var isbnString = isbnArray.join(",");
+                    var swString = sw(data, Verbund).stringText();
+                    $('#liste'+index).append(";"+isbnString);
+                    //$('#liste'+index).append( ";"+ rvk(data, "SWB").stringText() );
+
+                    //Schleife ueber andere Verbuende
+                    $.when($.get("http://localhost/isbn-search/GBV2XML.php?isbn="+isbnString),
+                           $.get("http://localhost/isbn-search/B3KAT2XML.php?isbn="+isbnString),
+                           $.get("http://localhost/isbn-search/HEBIS2XML.php?isbn="+isbnString),
+                           $.get("http://localhost/isbn-search/HBZ2XML.php?isbn="+isbnString))
+                    .then(function(a1,a2,a3,a4) {
+                            $.extend(rvkObjekt, rvk(a1[0], "GBV"));
+                            $.extend(rvkObjekt, rvk(a2[0], "B3KAT"));
+                            $.extend(rvkObjekt, rvk(a3[0], "HEBIS"));
+                            $.extend(rvkObjekt, rvk(a4[0], "HBZ"));
+
+                           $('#liste'+index).append(";"+rvkObjekt.stringText()+";done");
+                    });
+
+                } else {
+                    $('#liste'+index).append(";Keine zugehörige ISBN gefunden!");
+                    $('#liste'+index).append(";"+rvkObjekt.stringText()+";done");
+                }
+
+            });
+        });
+    
+    });
+    
+}
+
+
+//-->
+</script>
+
+</head>
+<body>
+
+
+
+
+<div id='ausgabe0'>
+    
+</div>
+
+<div id='ausgabe'>
+    
+</div>
+
+<div id='ausgabe2'>
+    
+</div>
+
+<hr/>
+
+<form>
+<textarea  id="eingabeListe" cols="100" rows="20"></textarea>
+<input type="button" value="Submit" onclick='listeEingabe($("#eingabeListe").val());' /><br/>
+</form>
+
+<div id='ausgabe3'>
+    
+</div>
+
+<hr/>
+<h2>Annette's Liste</h2>
+<form>
+<textarea  id="ppnListe" cols="100" rows="20"></textarea>
+<input type="button" value="Submit" onclick='ppnListeBestand($("#ppnListe").val());' /><br/>
+</form>
+
+<div id='ausgabe4'>
+    
+</div>
+
+</body>
+</html>
