@@ -1,9 +1,6 @@
 {
     "name": "ub-mannheim/malibu",
     "description": "Mannheim library utilities",
-    "require": {
-        "ext-mbstring": "*"
-    },
     "scripts": {
         "post-install-cmd": "curl -o 'isbn/jquery-2.1.1.min.js' 'https://code.jquery.com/jquery-2.1.1.min.js'"
     },
